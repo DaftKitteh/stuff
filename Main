@@ -1,0 +1,254 @@
+package sourcePackage;
+
+import java.awt.Desktop;
+import java.awt.Event;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.MessageBox;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Text;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.events.KeyAdapter;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.wb.swt.SWTResourceManager;
+import org.eclipse.swt.graphics.Point;
+
+public class FOSGUImain {
+
+	protected static Shell shlFileOpener;
+	private static Text listOfPaths;
+	private static Text inputBox;
+	private static LinkedHashMap<String, String> hm = new LinkedHashMap<String, String>(); 
+
+	/**
+	 * Launch the application.
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		try {
+			FOSGUImain window = new FOSGUImain();
+			window.open();
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+	}
+	
+			
+		
+	public static void errorMessage(String displayError) { 
+		 MessageBox messageBox = new MessageBox(shlFileOpener, SWT.ICON_ERROR);
+		 messageBox.setMessage(displayError); 
+		 int result = messageBox.open();
+	}
+	public static void checkIfTxtExists() { 
+		String fileName = "Paths.txt"; 
+		BufferedReader br; 
+		//Attempts to read fileName
+		try { 
+			br = new BufferedReader(new InputStreamReader(new FileInputStream(fileName)));
+			
+			//Attempts to close fileName
+			try {
+				br.close();
+			} catch(IOException e1 ) { 
+				System.out.println("Fucked up while trying to close buffered reader"); 
+				System.out.println(e1); 
+			}
+		} catch (FileNotFoundException e1) { 
+			errorMessage("The file " + fileName + " does not exist" 
+					 + "\nI have created the file for you."); 
+			try {  
+				PrintWriter writer = new PrintWriter(fileName, "UTF-8");
+				writer.println("");
+				writer.close();
+			} catch(Exception e2) { 
+				errorMessage("Error while trying to create " + fileName);
+			}
+		}
+	}
+	// Proper usage of this is x.setText(displayText(s)); 
+	public static String displayText(String s) { 
+		// What this does is gets the current output of the text box 
+		// Then adds it's own text into it 
+		String outputText = listOfPaths.getText() + "\n" + s; 
+		return outputText;
+		
+	}
+	
+	
+	public static void readFile() { 
+ 
+		String fileName = "Paths.txt"; 
+		BufferedReader br; 
+		String line; 
+		//Attempts to read fileName
+		try { 
+			br = new BufferedReader(new InputStreamReader(new FileInputStream(fileName)));
+			try { 
+				// Starts reading the file and adding values to linked hashmap
+				while ((line = br.readLine()) != null) { 
+					String[] lineSplit1 = line.split("#"); 
+					String lineKey = lineSplit1[0]; 
+					String lineValue = lineSplit1[1]; 
+					hm.put(lineKey, lineValue); // Don't forget to split this later on
+				}
+			} catch(Exception e3) { 
+				errorMessage("Error when trying to read the file and add "
+						+ "the values to a hashmap"); 
+			}
+			//Attempts to close fileName
+			try {
+				br.close();
+			} catch(IOException e1 ) { 
+				System.out.println("Fucked up while trying to close buffered reader"); 
+				System.out.println(e1); 
+			}
+		} catch (FileNotFoundException e1) { 
+			errorMessage("The file " + fileName + " does not exist" 
+					 + "\nI have created the file for you."); 
+			try {  
+				PrintWriter writer = new PrintWriter(fileName, "UTF-8");
+				writer.println("");
+				writer.close();
+			} catch(Exception e2) { 
+				errorMessage("Error while trying to create " + fileName);
+			}
+		}
+	}
+	public static void displayFile() { 
+		listOfPaths.setText(displayText("Printing all paths.")); 
+		while(true ) { 
+			for (Map.Entry<String,String> entry : hm.entrySet()) {
+				String key = entry.getKey(); 
+				String displayValueUncut = entry.getValue(); 
+				String[] displayValueList = displayValueUncut.split("`"); 
+				String displayValue = displayValueList[0]; 
+				listOfPaths.setText(displayText("|Command| " + key + " |Value| " + displayValue));
+			}
+			break;
+		}
+	}
+	
+	public static void openPath(String s1) { 
+		try { 
+		String pathUncut = hm.get(s1); 
+		String[] pathUnsplit = pathUncut.split("`"); 
+		String path = pathUnsplit[1]; 
+		Desktop.getDesktop().open(new File(path)); 
+		listOfPaths.setText(displayText("Succesfully opened the folder~"));
+		} catch(Exception e1) { 
+			listOfPaths.setText(displayText("Error while trying to open the path.")); 
+		}
+	}
+
+	public static void inputCommand(String s) { 
+		if(s.startsWith("/quit") ) { 
+			System.exit(0); 
+		}
+		else if(s.startsWith("/refresh")) { 
+			listOfPaths.setText("");
+			inputBox.setText("");
+			readFile(); 
+			displayFile();
+		}
+
+		else { 
+			listOfPaths.setText(displayText("That's not a valid command."));
+			inputBox.setText(""); 
+		}
+	}
+	public static void getInput() { 
+		String userInput = inputBox.getText(); 
+		userInput = userInput.toLowerCase(); userInput = userInput.trim(); 
+		if(userInput.startsWith("/")) { 
+			inputCommand(userInput);
+		}
+		else { 
+			inputBox.setText("");
+			listOfPaths.setText(""); 
+			
+			openPath(userInput); 
+			displayFile(); 
+			
+		}
+		
+	}
+	
+
+	/**
+	 * Open the window.
+	 */
+	public void open() {
+		Display display = Display.getDefault();
+		createContents();
+		shlFileOpener.open();
+		shlFileOpener.layout();
+		while (!shlFileOpener.isDisposed()) {
+			if (!display.readAndDispatch()) {
+				display.sleep();
+			}
+		}
+	}
+
+	/**
+	 * Create contents of the window.
+	 */
+	protected void createContents() {
+		 
+		shlFileOpener = new Shell();
+		shlFileOpener.setMinimumSize(new Point(450, 395));
+		shlFileOpener.setSize(450, 395);
+		shlFileOpener.setText("File Opener");
+		
+		listOfPaths = new Text(shlFileOpener, SWT.BORDER | SWT.MULTI);
+		listOfPaths.setFont(SWTResourceManager.getFont("tewi", 9, SWT.NORMAL));
+		listOfPaths.setText("");
+		listOfPaths.setEnabled(false);
+		listOfPaths.setEditable(false);
+		listOfPaths.setBounds(10, 10, 428, 323);
+	
+		Button btnNewButton = new Button(shlFileOpener, SWT.NONE);
+		btnNewButton.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				getInput(); 
+			}
+		});
+		btnNewButton.setBounds(386, 339, 52, 27);
+		btnNewButton.setText("Enter");
+		
+		inputBox = new Text(shlFileOpener, SWT.BORDER);
+		inputBox.setText("");
+		inputBox.setBounds(10, 339, 370, 25);
+		inputBox.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyPressed(KeyEvent e) {
+				if (e.keyCode == 13) { 
+					getInput(); 
+					// input stuff to do here
+				}
+				else { 
+					// do nothing
+				}
+			}
+		});
+		
+		readFile();
+		displayFile(); 
+		
+	}
+}
